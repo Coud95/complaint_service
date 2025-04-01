@@ -1,12 +1,12 @@
 package com.empik.complaint_service.api.model;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 public class Complaint {
     private String productId;
     private String description;
-    private Date creationDate;
-    private String submitter;
+    private LocalDate creationDate;
+    private Submitter submitter;
     private String country;
     private int submitCount;
 
@@ -26,19 +26,19 @@ public class Complaint {
         this.description = description;
     }
 
-    public Date getCreationDate() {
+    public LocalDate getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(Date creationDate) {
+    public void setCreationDate(LocalDate creationDate) {
         this.creationDate = creationDate;
     }
 
-    public String getSubmitter() {
+    public Submitter getSubmitter() {
         return submitter;
     }
 
-    public void setSubmitter(String submitter) {
+    public void setSubmitter(Submitter submitter) {
         this.submitter = submitter;
     }
 
