@@ -2,7 +2,7 @@ package com.empik.complaint_service.infrastructure.entity;
 
 import jakarta.persistence.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -21,7 +21,7 @@ public class ComplaintEntity {
     private String description;
 
     @Column(name = "creation_date", nullable = false)
-    private LocalDate creationDate;
+    private LocalDateTime creationDate;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "submitterId", referencedColumnName = "id")
@@ -36,7 +36,7 @@ public class ComplaintEntity {
     public ComplaintEntity() {
     }
 
-    public ComplaintEntity(Long productId, String description, LocalDate creationDate, SubmitterEntity submitterEntity, String country,
+    public ComplaintEntity(Long productId, String description, LocalDateTime creationDate, SubmitterEntity submitterEntity, String country,
                            Integer submitCount) {
         this.productId = productId;
         this.description = description;
@@ -70,11 +70,11 @@ public class ComplaintEntity {
         this.description = description;
     }
 
-    public LocalDate getCreationDate() {
+    public LocalDateTime getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(LocalDate creationDate) {
+    public void setCreationDate(LocalDateTime creationDate) {
         this.creationDate = creationDate;
     }
 

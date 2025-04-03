@@ -65,6 +65,12 @@
 			<artifactId>springdoc-openapi-ui</artifactId>
 			<version>1.7.0</version>
 		</dependency>
+			<dependency>
+				<groupId>io.ipinfo</groupId>
+				<artifactId>ipinfo-api</artifactId>
+				<version>3.0.2</version>
+				<scope>compile</scope>
+			</dependency>
 	</dependencies>
 
 	<build>

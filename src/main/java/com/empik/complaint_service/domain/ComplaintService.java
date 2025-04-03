@@ -3,40 +3,41 @@ package com.empik.complaint_service.domain;
 import com.empik.complaint_service.infrastructure.entity.ComplaintEntity;
 import com.empik.complaint_service.infrastructure.entity.SubmitterEntity;
 import com.empik.complaint_service.infrastructure.mapper.ComplaintMapper;
-import com.empik.complaint_service.infrastructure.repository.ComplaintRepository;
-import com.empik.complaint_service.infrastructure.repository.SubmitterRepository;
+import com.empik.complaint_service.infrastructure.repository.ComplaintJpaRepository;
+import com.empik.complaint_service.infrastructure.repository.SubmitterJpaRepository;
 import com.empik.complaint_service.model.Complaint;
 import com.empik.complaint_service.model.EditComplaint;
 import com.empik.complaint_service.model.Submitter;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class ComplaintService {
+    private final ComplaintJpaRepository complaintRepository;
+    private final SubmitterJpaRepository submitterRepository;
+    private final CountryResolver countryResolver;
+    private static final int FIRST_SUBMIT_COUNT = 1;
 
-    private final ComplaintRepository complaintRepository;
-    private final SubmitterRepository submitterRepository;
-
-    public ComplaintService(ComplaintRepository complaintRepository, SubmitterRepository submitterRepository) {
+    public ComplaintService(ComplaintJpaRepository complaintRepository, SubmitterJpaRepository submitterRepository,
+                            CountryResolver countryResolver) {
         this.complaintRepository = complaintRepository;
         this.submitterRepository = submitterRepository;
+        this.countryResolver = countryResolver;
     }
 
-    public Complaint addComplaint(Complaint complaint) {
+    public Complaint addComplaint(Complaint complaint, String clientIpAddress) {
         SubmitterEntity submitterEntity = getOrCreateSubmitter(complaint);
         Optional<ComplaintEntity> duplicatedComplaintEntity = submitterEntity.getComplaintEntities().stream()
                 .filter(complaintEntity -> complaintEntity.getProductId().equals(complaint.getProductId()))
                 .findFirst();
         if (duplicatedComplaintEntity.isPresent()) {
-            ComplaintEntity existingComplaint = duplicatedComplaintEntity.get();
-            existingComplaint.setSubmitCount(existingComplaint.getSubmitCount() + 1);
-            complaintRepository.save(existingComplaint);
-            return ComplaintMapper.mapToModel(existingComplaint);
+            return updateSubmitCount(duplicatedComplaintEntity.get());
         }
-        ComplaintEntity complaintEntity = new ComplaintEntity(complaint.getProductId(), complaint.getDescription(), LocalDate.now(), submitterEntity, "Poland", 1);
+        ComplaintEntity complaintEntity = new ComplaintEntity(complaint.getProductId(), complaint.getDescription(),
+                LocalDateTime.now(), submitterEntity, countryResolver.getCountryByIp(clientIpAddress), FIRST_SUBMIT_COUNT);
         List<ComplaintEntity> complaintEntities = submitterEntity.getComplaintEntities();
         complaintEntities.add(complaintEntity);
         submitterEntity.setComplaintEntities(complaintEntities);
@@ -72,5 +73,11 @@ public class ComplaintService {
             SubmitterEntity newSubmitterEntity = new SubmitterEntity(newSubmitter.getFirstName(), newSubmitter.getLastName(), newSubmitter.getEmailAddress());
             return submitterRepository.save(newSubmitterEntity);
         });
+    }
+
+    private Complaint updateSubmitCount(ComplaintEntity complaintEntity) {
+        complaintEntity.setSubmitCount(complaintEntity.getSubmitCount() + 1);
+        complaintRepository.save(complaintEntity);
+        return ComplaintMapper.mapToModel(complaintEntity);
     }
 }

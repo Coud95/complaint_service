@@ -6,7 +6,7 @@ paths:
   /complaint/{id}:
     get:
       summary: Info for a specific complaint
-      operationId: showComplaintById
+      operationId: getComplaintById
       parameters:
         - name: id
           in: path
