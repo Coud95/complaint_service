@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface SubmitterJpaRepository extends JpaRepository<SubmitterEntity, Long> {
+public interface SubmitterRepository extends JpaRepository<SubmitterEntity, Long> {
     Optional<SubmitterEntity> findByEmailAddress(String emailAddress);
 }

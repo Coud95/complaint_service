@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.NativeWebRequest;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -42,11 +43,8 @@ public class ComplaintHandler implements ComplaintApiDelegate {
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    private String getClientIpAddress(NativeWebRequest request) {
-        HttpServletRequest httpServletRequest = request.getNativeRequest(HttpServletRequest.class);
-        if (httpServletRequest != null) {
-            return httpServletRequest.getRemoteAddr();
-        }
-        return null;
+    @Override
+    public ResponseEntity<List<Complaint>> getAllComplaints() {
+        return new ResponseEntity<>(complaintService.getAllComplaints(), HttpStatus.OK);
     }
 }

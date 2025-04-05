@@ -3,8 +3,8 @@ package com.empik.complaint_service.domain;
 import com.empik.complaint_service.infrastructure.entity.ComplaintEntity;
 import com.empik.complaint_service.infrastructure.entity.SubmitterEntity;
 import com.empik.complaint_service.infrastructure.mapper.ComplaintMapper;
-import com.empik.complaint_service.infrastructure.repository.ComplaintJpaRepository;
-import com.empik.complaint_service.infrastructure.repository.SubmitterJpaRepository;
+import com.empik.complaint_service.infrastructure.repository.ComplaintRepository;
+import com.empik.complaint_service.infrastructure.repository.SubmitterRepository;
 import com.empik.complaint_service.model.Complaint;
 import com.empik.complaint_service.model.EditComplaint;
 import com.empik.complaint_service.model.Submitter;
@@ -16,12 +16,12 @@ import java.util.Optional;
 
 @Service
 public class ComplaintService {
-    private final ComplaintJpaRepository complaintRepository;
-    private final SubmitterJpaRepository submitterRepository;
+    private final ComplaintRepository complaintRepository;
+    private final SubmitterRepository submitterRepository;
     private final CountryResolver countryResolver;
     private static final int FIRST_SUBMIT_COUNT = 1;
 
-    public ComplaintService(ComplaintJpaRepository complaintRepository, SubmitterJpaRepository submitterRepository,
+    public ComplaintService(ComplaintRepository complaintRepository, SubmitterRepository submitterRepository,
                             CountryResolver countryResolver) {
         this.complaintRepository = complaintRepository;
         this.submitterRepository = submitterRepository;
@@ -29,20 +29,9 @@ public class ComplaintService {
     }
 
     public Complaint addComplaint(Complaint complaint, String clientIpAddress) {
-        SubmitterEntity submitterEntity = getOrCreateSubmitter(complaint);
-        Optional<ComplaintEntity> duplicatedComplaintEntity = submitterEntity.getComplaintEntities().stream()
-                .filter(complaintEntity -> complaintEntity.getProductId().equals(complaint.getProductId()))
-                .findFirst();
-        if (duplicatedComplaintEntity.isPresent()) {
-            return updateSubmitCount(duplicatedComplaintEntity.get());
-        }
-        ComplaintEntity complaintEntity = new ComplaintEntity(complaint.getProductId(), complaint.getDescription(),
-                LocalDateTime.now(), submitterEntity, countryResolver.getCountryByIp(clientIpAddress), FIRST_SUBMIT_COUNT);
-        List<ComplaintEntity> complaintEntities = submitterEntity.getComplaintEntities();
-        complaintEntities.add(complaintEntity);
-        submitterEntity.setComplaintEntities(complaintEntities);
-        ComplaintEntity savedComplaint = complaintRepository.save(complaintEntity);
-        return ComplaintMapper.mapToModel(savedComplaint);
+        SubmitterEntity submitterEntity = getOrCreateSubmitter(complaint.getSubmitter());
+        Optional<Complaint> duplicatedComplaint = updateComplaintIfDuplicated(submitterEntity, complaint);
+        return duplicatedComplaint.orElseGet(() -> submitNewComplaint(complaint, submitterEntity, clientIpAddress));
     }
 
     public Optional<Complaint> editComplaint(EditComplaint editComplaint) {
@@ -51,33 +40,52 @@ public class ComplaintService {
             ComplaintEntity complaintEntity = existingComplaint.get();
             complaintEntity.setDescription(editComplaint.getDescription());
             ComplaintEntity savedComplaint = complaintRepository.save(complaintEntity);
-            Complaint mappedComplaint = ComplaintMapper.mapToModel(savedComplaint);
-            return Optional.of(mappedComplaint);
+            return Optional.of(ComplaintMapper.mapToModel(savedComplaint));
         }
         return Optional.empty();
     }
 
     public Optional<Complaint> getComplaintById(Long id) {
         Optional<ComplaintEntity> complaintEntity = complaintRepository.findById(id);
-        if (complaintEntity.isPresent()) {
-            Complaint mappedComplaint = ComplaintMapper.mapToModel(complaintEntity.get());
-            return Optional.of(mappedComplaint);
-        }
-        return Optional.empty();
+        return complaintEntity.map(ComplaintMapper::mapToModel);
     }
 
-    private SubmitterEntity getOrCreateSubmitter(Complaint complaint) {
-        Optional<SubmitterEntity> existingSubmitter = submitterRepository.findByEmailAddress(complaint.getSubmitter().getEmailAddress());
+    public List<Complaint> getAllComplaints() {
+        List<ComplaintEntity> complaintEntities = complaintRepository.findAll();
+        return complaintEntities.stream()
+                .map(ComplaintMapper::mapToModel)
+                .toList();
+    }
+
+    private SubmitterEntity getOrCreateSubmitter(Submitter submitter) {
+        Optional<SubmitterEntity> existingSubmitter = submitterRepository.findByEmailAddress(submitter.getEmailAddress());
         return existingSubmitter.orElseGet(() -> {
-            Submitter newSubmitter = complaint.getSubmitter();
-            SubmitterEntity newSubmitterEntity = new SubmitterEntity(newSubmitter.getFirstName(), newSubmitter.getLastName(), newSubmitter.getEmailAddress());
+            SubmitterEntity newSubmitterEntity = new SubmitterEntity(submitter.getFirstName(), submitter.getLastName(),
+                    submitter.getEmailAddress());
             return submitterRepository.save(newSubmitterEntity);
         });
+    }
+
+    private Optional<Complaint> updateComplaintIfDuplicated(SubmitterEntity submitterEntity, Complaint complaint) {
+        Optional<ComplaintEntity> duplicatedComplaintEntity = submitterEntity.getComplaintEntities().stream()
+                .filter(complaintEntity -> complaintEntity.getProductId().equals(complaint.getProductId()))
+                .findFirst();
+        return duplicatedComplaintEntity.map(this::updateSubmitCount);
     }
 
     private Complaint updateSubmitCount(ComplaintEntity complaintEntity) {
         complaintEntity.setSubmitCount(complaintEntity.getSubmitCount() + 1);
         complaintRepository.save(complaintEntity);
         return ComplaintMapper.mapToModel(complaintEntity);
+    }
+
+    private Complaint submitNewComplaint(Complaint complaint, SubmitterEntity submitter, String clientIpAddress) {
+        ComplaintEntity complaintEntity = new ComplaintEntity(complaint.getProductId(), complaint.getDescription(),
+                LocalDateTime.now(), submitter, countryResolver.getCountryByIp(clientIpAddress), FIRST_SUBMIT_COUNT);
+        List<ComplaintEntity> complaintEntities = submitter.getComplaintEntities();
+        complaintEntities.add(complaintEntity);
+        submitter.setComplaintEntities(complaintEntities);
+        ComplaintEntity savedComplaint = complaintRepository.save(complaintEntity);
+        return ComplaintMapper.mapToModel(savedComplaint);
     }
 }
