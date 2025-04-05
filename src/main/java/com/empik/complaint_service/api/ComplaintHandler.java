@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.NativeWebRequest;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,8 +24,8 @@ public class ComplaintHandler implements ComplaintApiDelegate {
 
     @Override
     public ResponseEntity<Complaint> addComplaint(Complaint complaint) {
-            Complaint savedComplaint = complaintService.addComplaint(complaint, request.getRemoteAddr());
-            return new ResponseEntity<>(savedComplaint, HttpStatus.CREATED);
+        Complaint savedComplaint = complaintService.addComplaint(complaint, request.getRemoteAddr());
+        return new ResponseEntity<>(savedComplaint, HttpStatus.CREATED);
     }
 
     @Override

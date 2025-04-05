@@ -41,8 +41,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComplaintArray'
-        '404':
-          description: Complaint not found
         default:
           description: Unexpected error
           content:
@@ -68,8 +66,6 @@ paths:
                 $ref: '#/components/schemas/Complaint'
         '400':
           description: Invalid input
-        '422':
-          description: Validation exception
         default:
           description: Unexpected error
           content:
@@ -95,8 +91,6 @@ paths:
                 $ref: '#/components/schemas/Complaint'
         '404':
           description: Complaint not found
-        '422':
-          description: Validation exception
         default:
           description: Unexpected error
           content:
