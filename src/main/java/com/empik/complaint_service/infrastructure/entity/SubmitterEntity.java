@@ -24,8 +24,7 @@ public class SubmitterEntity {
     @Column(name = "email_address", nullable = false)
     private String emailAddress;
 
-    @OneToMany(fetch = FetchType.EAGER)
-    @JoinColumn(name = "complaintId", referencedColumnName = "id")
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "submitterEntity", cascade = CascadeType.ALL)
     private List<ComplaintEntity> complaintEntities;
 
     public SubmitterEntity() {
