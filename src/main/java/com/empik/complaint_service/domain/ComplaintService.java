@@ -8,6 +8,8 @@ import com.empik.complaint_service.infrastructure.repository.SubmitterRepository
 import com.empik.complaint_service.model.Complaint;
 import com.empik.complaint_service.model.EditComplaint;
 import com.empik.complaint_service.model.Submitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,6 +18,7 @@ import java.util.Optional;
 
 @Service
 public class ComplaintService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ComplaintService.class);
     private final ComplaintRepository complaintRepository;
     private final SubmitterRepository submitterRepository;
     private final CountryResolver countryResolver;
@@ -42,6 +45,7 @@ public class ComplaintService {
             ComplaintEntity savedComplaint = complaintRepository.save(complaintEntity);
             return Optional.of(ComplaintMapper.mapToModel(savedComplaint));
         }
+        LOGGER.warn("Complaint with ID {} not found for editing", editComplaint.getComplaintId());
         return Optional.empty();
     }
 
