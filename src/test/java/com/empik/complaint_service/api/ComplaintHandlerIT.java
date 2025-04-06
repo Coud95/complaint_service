@@ -4,26 +4,21 @@ import com.empik.complaint_service.infrastructure.entity.ComplaintEntity;
 import com.empik.complaint_service.infrastructure.entity.SubmitterEntity;
 import com.empik.complaint_service.infrastructure.repository.ComplaintRepository;
 import com.empik.complaint_service.infrastructure.repository.SubmitterRepository;
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.with;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class ComplaintHandlerIT {
+public class ComplaintHandlerIT extends BaseIT {
 
     private static final String FIRST_NAME = "John";
     private static final String LAST_NAME = "Doe";
@@ -44,38 +39,9 @@ public class ComplaintHandlerIT {
             "  \"description\": \"New description\"\n" +
             "}";
 
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
-            "postgres:16-alpine"
-    );
-
-    @LocalServerPort
-    private Integer port;
-
-    @BeforeAll
-    static void beforeAll() {
-        postgres.start();
-    }
-
-    @AfterAll
-    static void afterAll() {
-        postgres.stop();
-    }
-
-    @BeforeEach
-    void setUp() {
-        RestAssured.baseURI = "http://localhost:" + port;
-    }
-
     @AfterEach
     void tearDown() {
         submitterRepository.deleteAll();
-    }
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
     }
 
     @Autowired
@@ -190,6 +156,55 @@ public class ComplaintHandlerIT {
                 .body("[0].country", equalTo(COUNTRY))
                 .body("[0].creationDate", equalTo(complaintEntity.getCreationDate()
                         .truncatedTo(ChronoUnit.MICROS).toString()));
+    }
+
+    @Test
+    void shouldReturnBadRequest() {
+        with().body("{\n" +
+                        "  \"productId\": \"123\",\n" +
+                        "  \"description\": \"Test complaint\",\n" +
+                        "  \"submitter\": {\n" +
+                        "    \"firstName\": \"John\",\n" +
+                        "    \"lastName\": \"Doe\",\n" +
+                        "    \"emailAddress\": \"badEmail\"\n" +
+                        "  }\n" +
+                        "}")
+                .contentType(ContentType.JSON)
+                .when()
+                .post("/complaint")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void shouldGetEmptyList() {
+        given()
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/complaint")
+                .then()
+                .statusCode(200)
+                .body(".", equalTo(Collections.emptyList()));
+    }
+
+    @Test
+    void shouldGetNotFound() {
+       given()
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/complaint/{id}", 999L)
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void shouldNotUpdateNonExistingComplaint() {
+        with().body(PUT_REQUEST_BODY)
+                .contentType(ContentType.JSON)
+                .when()
+                .put("/complaint")
+                .then()
+                .statusCode(404);
     }
 
     private ComplaintEntity createComplaint() {
